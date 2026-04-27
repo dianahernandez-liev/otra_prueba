@@ -445,18 +445,19 @@ if stock_seleccionado:
             st.pyplot(fig)
 
 
-            ### ROLLING WINDOWS
+        
+        ### ROLLING WINDOWS
         st.header("Rolling Windows VaR")
         rolling_mean = df_rendimientos.rolling(window=252).mean()
         rolling_std = df_rendimientos.rolling(window=252).std()
         #VaR 95% Rolling
         VaR_95_rolling = norm.ppf(1-0.95, rolling_mean, rolling_std)
         VaR_95_rolling_percent = (VaR_95_rolling * 100).round(4)
-        VaR_95_rolling_df = pd.DataFrame({'Date': df_rendimientos.index, '95% VaR Rolling': VaR_95_rolling_percent.squeeze()})
-        VaR_95_rolling_df.set_index('Date', inplace=True)
+        VaR_95_rolling_df = pd.DataFrame({"95% VaR Paramétrico Rolling": VaR_95_rolling_percent}, index=df_rendimientos.index)
+        #VaR histórico Rolling
         hVaR_95_rolling = df_rendimientos.rolling(window=252).quantile(0.05)
         hVaR_95_rolling_percent = (hVaR_95_rolling * 100).round(4)
-        hVaR_95_rolling_df = pd.DataFrame({'Date': df_rendimientos.index, '95%  VaR histórico Rolling': hVaR_95_rolling_percent.squeeze()})
+        hVaR_95_rolling_df = pd.DataFrame({"95% VaR Histórico Rolling": hVaR_95_rolling_percent}, index=df_rendimientos.index)
         hVaR_95_rolling_df.set_index('Date', inplace=True)
 
         # Crear la figura y el eje
@@ -465,10 +466,9 @@ if stock_seleccionado:
         ax.plot(df_rendimientos.index, hVaR_95_rolling_df['95%  VaR histórico Rolling'], label='95% Rolling VaR Histórico', color='#00ff88')
         ax.plot(df_rendimientos.index, VaR_95_rolling_df['95%  VaR histórico Rolling'], label='95% Rolling VaR Paramétrico', color='#4b0082')
         #Configurar etiquetas y leyenda
-        plt.title('95% Rolling VaR vs Retornos Diarios', fontsize=14, fontweight='bold', color='#fc6e22', fontfamily='monospace', pad=20)
-        plt.xlabel('Fecha', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
-        plt.ylabel('Valores (%)', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
-        plt.legend()
+        ax.set_title('95% Rolling VaR vs Retornos Diarios', fontsize=14, fontweight='bold', color='#fc6e22', fontfamily='monospace', pad=20)
+        ax.set_xlabel('Fecha', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
+        ax.set_ylabel('Valores (%)', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
+        ax.legend()
         #mostrar la figura en Streamlit
-        st.pyplot(plt)
-     
+        st.pyplot(fig)
