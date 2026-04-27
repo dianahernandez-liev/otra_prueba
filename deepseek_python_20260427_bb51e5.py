@@ -448,17 +448,17 @@ if stock_seleccionado:
         
         ### ROLLING WINDOWS
         st.header("Rolling Windows VaR")
-        rolling_mean = df_rendimientos.rolling(window=252).mean()
-        rolling_std = df_rendimientos.rolling(window=252).std()
-        #VaR 95% Rolling
+        # Calcular rolling windows SOLO para la acción seleccionada
+        rolling_mean = df_rendimientos[stock_seleccionado].rolling(window=252).mean()
+        rolling_std = df_rendimientos[stock_seleccionado].rolling(window=252).std()
+        
+        # VaR 95% Rolling Paramétrico
         VaR_95_rolling = norm.ppf(1-0.95, rolling_mean, rolling_std)
-        VaR_95_rolling_percent = (VaR_95_rolling * 100).round(4)
-        VaR_95_rolling_df = pd.DataFrame({"95% VaR Paramétrico Rolling": VaR_95_rolling_percent}, index=df_rendimientos.index)
-        #VaR histórico Rolling
-        hVaR_95_rolling = df_rendimientos.rolling(window=252).quantile(0.05)
-        hVaR_95_rolling_percent = (hVaR_95_rolling * 100).round(4)
-        hVaR_95_rolling_df = pd.DataFrame({"95% VaR Histórico Rolling": hVaR_95_rolling_percent}, index=df_rendimientos.index)
-        hVaR_95_rolling_df.set_index('Date', inplace=True)
+        VaR_95_rolling_percent = VaR_95_rolling * 100
+        
+        # VaR 95% Rolling Histórico
+        hVaR_95_rolling = df_rendimientos[stock_seleccionado].rolling(window=252).quantile(0.05)
+        hVaR_95_rolling_percent = hVaR_95_rolling * 100
 
         # Crear la figura y el eje
         fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
