@@ -200,10 +200,10 @@ if stock_seleccionado:
             st.subheader("Metricas de riesgo")
             #95%
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("95% VaR", f"{VaR_95_n:.4%}")
-            col5.metric("(Historical)", f"{hVaR_95:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_95:.4%}")
-            col7.metric("95% CVaR", f"{CVaR_95:.4%}")
+            col4.metric("95% VaR", f"{VaR_95_n:.3%}")
+            col5.metric("(Historical)", f"{hVaR_95:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_95:.3%}")
+            col7.metric("95% CVaR", f"{CVaR_95:.3%}")
             st.subheader("Grafica metricas de riesgo")
             #Estilo general de las gráficas
             plt.style.use('dark_background')
@@ -237,11 +237,12 @@ if stock_seleccionado:
             
 
             #97.5%
+            st.subheader("α = 0.975")
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("97.5% VaR", f"{VaR_975_n:.4%}")
-            col5.metric("(Historical)", f"{hVaR_975:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_975:.4%}")
-            col7.metric("97.5% CVaR", f"{CVaR_975:.4%}")
+            col4.metric("97.5% VaR", f"{VaR_975_n:.3%}")
+            col5.metric("(Historical)", f"{hVaR_975:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_975:.3%}")
+            col7.metric("97.5% CVaR", f"{CVaR_975:.3%}")
             # Crear la figura y el eje
             fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
             ax.set_facecolor('#0f142e')
@@ -270,11 +271,12 @@ if stock_seleccionado:
             st.pyplot(fig)
 
             #99%
+            st.subheader("α = 0.99")
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("99% VaR", f"{VaR_99_n:.4%}")
-            col5.metric("(Historical)", f"{hVaR_99:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_99:.4%}")
-            col7.metric("99% CVaR", f"{CVaR_99:.4%}")
+            col4.metric("99% VaR", f"{VaR_99_n:.3%}")
+            col5.metric("(Historical)", f"{hVaR_99:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_99:.3%}")
+            col7.metric("99% CVaR", f"{CVaR_99:.3%}")
 
             # Crear la figura y el eje
             fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
@@ -335,11 +337,12 @@ if stock_seleccionado:
 
             st.subheader("Metricas de riesgo")
             #95%
+            st.subheader("α = 0.95")
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("95% VaR", f"{VaR_95_t:.4%}")
-            col5.metric("(Historical)", f"{hVaR_95_t:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_95_t:.4%}")
-            col7.metric("95% CVaR", f"{CVaR_95_t:.4%}")
+            col4.metric("95% VaR", f"{VaR_95_t:.3%}")
+            col5.metric("(Historical)", f"{hVaR_95_t:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_95_t:.3%}")
+            col7.metric("95% CVaR", f"{CVaR_95_t:.3%}")
             st.subheader("Grafica metricas de riesgo")
             #Estilo general de las gráficas
             plt.style.use('dark_background')
@@ -373,11 +376,12 @@ if stock_seleccionado:
             
 
             #97.5%
+            st.subheader("α = 0.975")
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("97.5% VaR", f"{VaR_975_t:.4%}")
-            col5.metric("(Historical)", f"{hVaR_975_t:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_975_t:.4%}")
-            col7.metric("97.5% CVaR", f"{CVaR_975_t:.4%}")
+            col4.metric("97.5% VaR", f"{VaR_975_t:.3%}")
+            col5.metric("(Historical)", f"{hVaR_975_t:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_975_t:.3%}")
+            col7.metric("97.5% CVaR", f"{CVaR_975_t:.3%}")
             # Crear la figura y el eje
             fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
             ax.set_facecolor('#0f142e')
@@ -406,11 +410,12 @@ if stock_seleccionado:
             st.pyplot(fig)
 
             #99%
+            st.subheader("α = 0.99")
             col4, col5, col6, col7= st.columns(4)
-            col4.metric("99% VaR", f"{VaR_99_t:.4%}")
-            col5.metric("(Historical)", f"{hVaR_99_t:.4%}")
-            col6.metric("(Monte Carlo)", f"{MCVaR_99_t:.4%}")
-            col7.metric("99% CVaR", f"{CVaR_99_t:.4%}")
+            col4.metric("99% VaR", f"{VaR_99_t:.3%}")
+            col5.metric("(Historical)", f"{hVaR_99_t:.3%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_99_t:.3%}")
+            col7.metric("99% CVaR", f"{CVaR_99_t:.3%}")
 
             # Crear la figura y el eje
             fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
@@ -438,3 +443,4 @@ if stock_seleccionado:
 
             # Mostrar la figura en Streamlit
             st.pyplot(fig)
+     
