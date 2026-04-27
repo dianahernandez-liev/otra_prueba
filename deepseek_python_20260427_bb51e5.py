@@ -1,22 +1,15 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 import numpy as np
 import yfinance as yf
-import plotly.graph_objects as go
-import plotly.express as px
-from datetime import datetime, timedelta
-import warnings
-warnings.filterwarnings('ignore')
+import matplotlib.pyplot as plt
+from scipy.stats import kurtosis, skew ,norm, shapiro
+import scipy.stats as stats
 
-# Configuración de la página
 st.set_page_config(
-    page_title="Quantum Finance Analytics | Stock Performance",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Estilos CSS personalizados para look futurista y formal
+    page_title="Análisis de Rendimientos",
+    page_icon=":chart_with_upwards_trend:",
+    )
 st.markdown("""
 <style>
     /* Main background */
@@ -56,11 +49,6 @@ st.markdown("""
         border-radius: 8px;
     }
     
-    /* Sidebar */
-    .css-1d391kg {
-        background: rgba(10, 14, 39, 0.95);
-        border-right: 1px solid rgba(0, 212, 255, 0.3);
-    }
     
     /* Buttons */
     .stButton button {
@@ -77,11 +65,18 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
     }
+     /* Select Box General Styles */
+    div[data-baseweb="select"] {
+        background: rgba(16, 20, 46, 0.8) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 212, 255, 0.3) !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease;
+    }
     
-    /* Select boxes */
-    .stSelectbox div[data-baseweb="select"] {
-        background: rgba(16, 20, 46, 0.8);
-        border-color: rgba(0, 212, 255, 0.5);
+    div[data-baseweb="select"]:hover {
+        border-color: rgba(0, 212, 255, 0.8) !important;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
     }
     
     /* Tabs */
@@ -112,341 +107,334 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Título principal
-st.markdown("""
-<h1 style='text-align: center; margin-bottom: 0;'>
-    ⚡ QUANTUM FINANCE ANALYTICS ⚡
-</h1>
-<p style='text-align: center; color: #667; margin-top: 0; font-size: 14px;'>
-    Advanced Stock Performance Intelligence System
-</p>
-<hr style='border: 1px solid rgba(0,212,255,0.3); margin-bottom: 30px;'>
-""", unsafe_allow_html=True)
+st.title("Visualización de Rendimientos de Acciones")
+st.header("Media, Kurtosisis y Sesgo")
 
-# Sidebar - Configuración
-with st.sidebar:
-    st.markdown("### 🎛️ SYSTEM CONTROLS")
-    
-    # Input para símbolo de acción
-    ticker = st.text_input(
-        "ASSET SYMBOL",
-        value="AAPL",
-        help="Enter stock symbol (e.g., AAPL, MSFT, GOOGL, TSLA)"
-    ).upper()
-    
-    # Selección de período
-    period = st.selectbox(
-        "TIMEFRAME",
-        options=["1mo", "3mo", "6mo", "1y", "2y", "5y"],
-        index=3,
-        format_func=lambda x: {
-            "1mo": "1 Month", "3mo": "3 Months", "6mo": "6 Months",
-            "1y": "1 Year", "2y": "2 Years", "5y": "5 Years"
-        }[x]
-    )
-    
-    st.markdown("---")
-    st.markdown("### 📊 METRICS CONFIG")
-    
-    # Comparación con benchmark
-    benchmark = st.selectbox(
-        "BENCHMARK",
-        options=["^GSPC", "^IXIC", "^DJI", "None"],
-        format_func=lambda x: {
-            "^GSPC": "S&P 500", "^IXIC": "NASDAQ", "^DJI": "Dow Jones", "None": "No Benchmark"
-        }[x]
-    )
-    
-    st.markdown("---")
-    st.markdown("### 📈 TECHNICAL INDICATORS")
-    
-    show_ma = st.checkbox("Moving Averages", value=True)
-    show_rsi = st.checkbox("RSI Indicator", value=False)
-    
-    st.markdown("---")
-    st.markdown("""
-    <p style='font-size: 11px; text-align: center; color: #667;'>
-        ⚡ Powered by Yahoo Finance<br>
-        📡 Real-time data processing
-    </p>
-    """, unsafe_allow_html=True)
+@st.cache_data
+def obtener_datos(stocks):
+    df = yf.download(stocks, start="2010-01-01")['Close']
+    return df
 
-# Función para cargar datos
-@st.cache_data(ttl=3600)
-def load_data(ticker, period):
-    try:
-        stock = yf.Ticker(ticker)
-        data = stock.history(period=period)
-        
-        # Información de la empresa
-        info = stock.info
-        
-        return data, info
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return None, None
+@st.cache_data
+def calcular_rendimientos(df):
+    return df.pct_change().dropna()
 
-# Cargar datos
-if ticker:
-    with st.spinner("🔄 Processing quantum data streams..."):
-        data, info = load_data(ticker, period)
-        
-    if data is not None and not data.empty:
-        
-        # Métricas principales
-        col1, col2, col3, col4, col5 = st.columns(5)
-        
-        current_price = data['Close'].iloc[-1]
-        price_change = data['Close'].iloc[-1] - data['Close'].iloc[-2]
-        price_change_pct = (price_change / data['Close'].iloc[-2]) * 100
-        volume = data['Volume'].iloc[-1]
-        avg_volume = data['Volume'].mean()
-        
-        # Calcular máximos y mínimos
-        max_price = data['High'].max()
-        min_price = data['Low'].min()
-        
-        with col1:
-            st.metric(
-                label="🔮 CURRENT PRICE",
-                value=f"${current_price:.2f}",
-                delta=f"{price_change_pct:.2f}%",
-                delta_color="normal"
-            )
-        
-        with col2:
-            st.metric(
-                label="📊 VOLUME",
-                value=f"{volume:,}",
-                delta=f"{((volume/avg_volume)-1)*100:.1f}% vs Avg",
-                delta_color="off"
-            )
-        
-        with col3:
-            st.metric(
-                label="📈 PERIOD HIGH",
-                value=f"${max_price:.2f}"
-            )
-        
-        with col4:
-            st.metric(
-                label="📉 PERIOD LOW",
-                value=f"${min_price:.2f}"
-            )
-        
-        with col5:
-            try:
-                market_cap = info.get('marketCap', 0)
-                if market_cap > 0:
-                    st.metric(
-                        label="🏦 MARKET CAP",
-                        value=f"${market_cap/1e9:.2f}B"
-                    )
-                else:
-                    st.metric(label="🏦 MARKET CAP", value="N/A")
-            except:
-                st.metric(label="🏦 MARKET CAP", value="N/A")
-        
-        st.markdown("---")
-        
-        # Gráfico de precios principal
-        st.markdown("### 📈 PRICE DYNAMICS")
-        
-        fig = go.Figure()
-        
-        # Candlestick chart
-        fig.add_trace(go.Candlestick(
-            x=data.index,
-            open=data['Open'],
-            high=data['High'],
-            low=data['Low'],
-            close=data['Close'],
-            name='Price Action',
-            increasing_line_color='#00ff88',
-            decreasing_line_color='#ff3366'
-        ))
-        
-        # Moving Averages
-        if show_ma:
-            ma20 = data['Close'].rolling(window=20).mean()
-            ma50 = data['Close'].rolling(window=50).mean()
-            
-            fig.add_trace(go.Scatter(
-                x=data.index, y=ma20,
-                name='MA 20',
-                line=dict(color='#00d4ff', width=1.5, dash='dash')
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=data.index, y=ma50,
-                name='MA 50',
-                line=dict(color='#ffa500', width=1.5, dash='dash')
-            ))
-        
-        fig.update_layout(
-            template='plotly_dark',
-            title=f'{ticker} - Quantum Price Analysis',
-            yaxis_title='Price (USD)',
-            xaxis_title='Date',
-            height=500,
-            paper_bgcolor='rgba(16, 20, 46, 0.6)',
-            plot_bgcolor='rgba(16, 20, 46, 0.3)',
-            font=dict(family="Courier New, monospace", size=12, color="#ccd6f6"),
-            hovermode='x unified'
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Tabs para análisis adicional
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 STATISTICS", "📉 RETURNS", "📈 TECHNICALS", "ℹ️ INFORMATION"])
-        
-        with tab1:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### 📐 Statistical Metrics")
-                returns = data['Close'].pct_change().dropna()
-                
-                stats_df = pd.DataFrame({
-                    'Metric': ['Volatility (Annualized)', 'Sharpe Ratio (approx)', 'Max Drawdown', 'Skewness', 'Kurtosis'],
-                    'Value': [
-                        f"{returns.std() * np.sqrt(252) * 100:.2f}%",
-                        f"{returns.mean() / returns.std() * np.sqrt(252):.2f}",
-                        f"{((data['Close'].cummax() - data['Close']) / data['Close'].cummax()).max() * 100:.2f}%",
-                        f"{returns.skew():.3f}",
-                        f"{returns.kurtosis():.3f}"
-                    ]
-                })
-                
-                st.dataframe(stats_df, use_container_width=True, hide_index=True)
-            
-            with col2:
-                st.markdown("#### 📊 Performance Summary")
-                cumulative_return = ((data['Close'].iloc[-1] / data['Close'].iloc[0]) - 1) * 100
-                
-                perf_df = pd.DataFrame({
-                    'Metric': ['Cumulative Return', 'Average Daily Return', 'Best Day', 'Worst Day', 'Positive Days (%)'],
-                    'Value': [
-                        f"{cumulative_return:.2f}%",
-                        f"{returns.mean() * 100:.3f}%",
-                        f"{returns.max() * 100:.2f}%",
-                        f"{returns.min() * 100:.2f}%",
-                        f"{(returns > 0).sum() / len(returns) * 100:.1f}%"
-                    ]
-                })
-                
-                st.dataframe(perf_df, use_container_width=True, hide_index=True)
-        
-        with tab2:
-            st.markdown("#### 📊 Return Distribution Analysis")
-            
-            # Histograma de returns
-            fig_hist = go.Figure()
-            fig_hist.add_trace(go.Histogram(
-                x=returns * 100,
-                nbinsx=50,
-                marker_color='#00d4ff',
-                opacity=0.7,
-                name='Daily Returns'
-            ))
-            
-            fig_hist.update_layout(
-                template='plotly_dark',
-                title='Daily Returns Distribution',
-                xaxis_title='Return (%)',
-                yaxis_title='Frequency',
-                height=400,
-                paper_bgcolor='rgba(16, 20, 46, 0.6)',
-                plot_bgcolor='rgba(16, 20, 46, 0.3)'
-            )
-            
-            st.plotly_chart(fig_hist, use_container_width=True)
-            
-            # Tabla de returns por período
-            st.markdown("#### 📅 Period Returns")
-            returns_periods = {
-                'Week': returns.iloc[-5:].sum() * 100,
-                'Month': returns.iloc[-21:].sum() * 100,
-                'Quarter': returns.iloc[-63:].sum() * 100,
-                'YTD': returns[returns.index >= datetime(datetime.now().year, 1, 1)].sum() * 100
-            }
-            
-            period_returns_df = pd.DataFrame(list(returns_periods.items()), columns=['Period', 'Return (%)'])
-            st.dataframe(period_returns_df, use_container_width=True, hide_index=True)
-        
-        with tab3:
-            if show_rsi:
-                # Calcular RSI
-                delta = data['Close'].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                rs = gain / loss
-                rsi = 100 - (100 / (1 + rs))
-                
-                fig_rsi = go.Figure()
-                fig_rsi.add_trace(go.Scatter(
-                    x=data.index, y=rsi,
-                    name='RSI 14',
-                    line=dict(color='#00d4ff', width=2)
-                ))
-                
-                # Añadir bandas de sobrecompra/sobreventa
-                fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Overbought")
-                fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Oversold")
-                
-                fig_rsi.update_layout(
-                    template='plotly_dark',
-                    title='Relative Strength Index (RSI)',
-                    yaxis_title='RSI Value',
-                    height=400,
-                    paper_bgcolor='rgba(16, 20, 46, 0.6)',
-                    plot_bgcolor='rgba(16, 20, 46, 0.3)'
-                )
-                
-                st.plotly_chart(fig_rsi, use_container_width=True)
-            else:
-                st.info("📊 Enable RSI Indicator in sidebar controls to display technical analysis")
-        
-        with tab4:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### 🏢 Company Profile")
-                company_info = {
-                    'Name': info.get('longName', 'N/A'),
-                    'Sector': info.get('sector', 'N/A'),
-                    'Industry': info.get('industry', 'N/A'),
-                    'Country': info.get('country', 'N/A'),
-                    'Website': info.get('website', 'N/A')
-                }
-                
-                for key, value in company_info.items():
-                    st.markdown(f"**{key}:** {value}")
-            
-            with col2:
-                st.markdown("#### 💰 Valuation Metrics")
-                valuation = {
-                    'P/E Ratio': f"{info.get('trailingPE', 'N/A')}",
-                    'P/B Ratio': f"{info.get('priceToBook', 'N/A')}",
-                    'Dividend Yield': f"{info.get('dividendYield', 0) * 100:.2f}%" if info.get('dividendYield') else 'N/A',
-                    'Beta': f"{info.get('beta', 'N/A')}",
-                    '52W High': f"${info.get('fiftyTwoWeekHigh', 'N/A')}",
-                    '52W Low': f"${info.get('fiftyTwoWeekLow', 'N/A')}"
-                }
-                
-                for key, value in valuation.items():
-                    st.markdown(f"**{key}:** {value}")
+# Lista de acciones de ejemplo
+stocks_lista = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN']
+distribuciones = ['Normal', 't-Student']
+
+with st.spinner("Descargando datos..."):
+    df_precios = obtener_datos(stocks_lista)
+    df_rendimientos = calcular_rendimientos(df_precios)
+
+# Selector de acción
+stock_seleccionado = st.selectbox("Selecciona una acción", stocks_lista)
+
+if stock_seleccionado:
+    st.subheader(f"Métricas de Rendimiento: {stock_seleccionado}")
     
-    else:
-        st.error(f"❌ Unable to load data for symbol '{ticker}'. Please check the symbol and try again.")
-        
-else:
-    st.warning("⚠️ Please enter a stock symbol to begin analysis")
+    rendimiento_medio = df_rendimientos[stock_seleccionado].mean()
+    Kurtosis = kurtosis(df_rendimientos[stock_seleccionado])
+    skew = skew(df_rendimientos[stock_seleccionado])
+    
+    col1, col2, col3= st.columns(3)
+    col1.metric("Rendimiento Medio Diario", f"{rendimiento_medio:.4%}")
+    col2.metric("Kurtosis", f"{Kurtosis:.4}")
+    col3.metric("Sesgo", f"{skew:.2}")
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<p style='text-align: center; color: #667; font-size: 12px;'>
-    ⚡ Quantum Finance Analytics System v1.0 | Data delayed by 15-20 minutes | Not financial advice
-</p>
-""", unsafe_allow_html=True)
+    # Gráfico de rendimientos diarios
+    st.subheader(f"Gráfico de Rendimientos: {stock_seleccionado}")
+    fig, ax = plt.subplots(figsize=(13, 5))
+    ax.plot(df_rendimientos.index, df_rendimientos[stock_seleccionado], label=stock_seleccionado)
+    ax.axhline(y=0, color='r', linestyle='--', alpha=0.7)
+    ax.legend()
+    ax.set_title(f"Rendimientos de {stock_seleccionado}")
+    ax.set_xlabel("Fecha")
+    ax.set_ylabel("Rendimiento Diario")
+    st.pyplot(fig)
+    # Histograma de rendimientos
+    st.subheader("Distribución de Rendimientos")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.hist(df_rendimientos[stock_seleccionado], bins=30, alpha=0.7, color='blue', edgecolor='black')
+    ax.axvline(rendimiento_medio, color='red', linestyle='dashed', linewidth=2, label=f"Promedio: {rendimiento_medio:.4%}")
+    ax.legend()
+    ax.set_title("Histograma de Rendimientos")
+    ax.set_xlabel("Rendimiento Diario")
+    ax.set_ylabel("Frecuencia")
+    st.pyplot(fig)
+
+    distribucion_seleccionada = st.selectbox("Selecciona una distribución", distribuciones)
+
+    if distribucion_seleccionada:
+        st.subheader(f"Métricas de Rendimiento: {stock_seleccionado}")
+        if distribucion_seleccionada == 'Normal':
+            #Metricas de riesgo
+            # VaR Parametrico (distribución normal)
+            mean_n = np.mean(df_rendimientos[stock_seleccionado])
+            stdev_n = np.std(df_rendimientos[stock_seleccionado])
+            VaR_95_n = (norm.ppf(1-0.95,mean_n,stdev_n))
+            VaR_975_n = (norm.ppf(1-0.975,mean_n,stdev_n))
+            VaR_99_n = (norm.ppf(1-0.99,mean_n,stdev_n))
+
+            # Historical VaR
+            hVaR_95 = (df_rendimientos[stock_seleccionado].quantile(0.05))
+            hVaR_975 = (df_rendimientos[stock_seleccionado].quantile(0.025))
+            hVaR_99 = (df_rendimientos[stock_seleccionado].quantile(0.01))
+
+            # Monte Carlo
+
+            # Number of simulations
+            n_sims = 100000
+
+            # Simulate returns and sort
+            sim_returns = np.random.normal(mean_n, stdev_n, n_sims)
+
+            MCVaR_95 = np.percentile(sim_returns, 5)
+            MCVaR_975 = np.percentile(sim_returns, 2.5)
+            MCVaR_99 = np.percentile(sim_returns, 1)
+
+            CVaR_95 = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_95].mean())
+            CVaR_975 = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_975].mean())
+            CVaR_99 = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_99].mean())
+
+            st.subheader("Metricas de riesgo")
+            #95%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("95% VaR", f"{VaR_95_n:.4%}")
+            col5.metric("(Historical)", f"{hVaR_95:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_95:.4%}")
+            col7.metric("95% CVaR", f"{CVaR_95:.4%}")
+            st.subheader("Grafica metricas de riesgo")
+            #Estilo general de las gráficas
+            plt.style.use('dark_background')
+
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_95
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_95:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_95_n, color='#00d4ff', linestyle='--', label='VaR 95% (Paramétrico)')
+            ax.axvline(x=MCVaR_95, color='#9b59b6', linestyle='--', label='VaR 95% (Monte Carlo)')
+            ax.axvline(x=hVaR_95, color='#00ff88', linestyle='--', label='VaR 95% (Histórico)')
+            ax.axvline(x=CVaR_95, color='#ff6b35', linestyle='-.', label='CVaR 95%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
+            
+
+            #97.5%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("97.5% VaR", f"{VaR_975_n:.4%}")
+            col5.metric("(Historical)", f"{hVaR_975:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_975:.4%}")
+            col7.metric("97.5% CVaR", f"{CVaR_975:.4%}")
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_95
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_975:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_975_n, color='#00d4ff', linestyle='--', label='VaR 97.5% (Paramétrico)')
+            ax.axvline(x=MCVaR_975, color='#9b59b6', linestyle='--', label='VaR 97.5% (Monte Carlo)')
+            ax.axvline(x=hVaR_975, color='#00ff88', linestyle='--', label='VaR 97.5% (Histórico)')
+            ax.axvline(x=CVaR_975, color='#ff6b35', linestyle='-.', label='CVaR 97.5%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
+
+            #99%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("99% VaR", f"{VaR_99_n:.4%}")
+            col5.metric("(Historical)", f"{hVaR_99:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_99:.4%}")
+            col7.metric("99% CVaR", f"{CVaR_99:.4%}")
+
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_99
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_99:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_99_n, color='#00d4ff', linestyle='--', label='VaR 99% (Paramétrico)')
+            ax.axvline(x=MCVaR_99, color='#9b59b6', linestyle='--', label='VaR 99% (Monte Carlo)')
+            ax.axvline(x=hVaR_99, color='#00ff88', linestyle='--', label='VaR 99% (Histórico)')
+            ax.axvline(x=CVaR_99, color='#ff6b35', linestyle='-.', label='CVaR 99%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
+
+            
+        elif distribucion_seleccionada == 't-Student':
+            # VaR Parametrico (distribución t-student)
+            mean_t = np.mean(df_rendimientos[stock_seleccionado])
+            stdev_t = np.std(df_rendimientos[stock_seleccionado])
+            VaR_95_t = (stats.t.ppf(1-0.95, df=len(df_rendimientos[stock_seleccionado])-1, loc=mean_t, scale=stdev_t))
+            VaR_975_t = (stats.t.ppf(1-0.975, df=len(df_rendimientos[stock_seleccionado])-1, loc=mean_t, scale=stdev_t))
+            VaR_99_t = (stats.t.ppf(1-0.99, df=len(df_rendimientos[stock_seleccionado])-1, loc=mean_t, scale=stdev_t))
+
+            # Historical VaR
+            hVaR_95_t = (df_rendimientos[stock_seleccionado].quantile(0.05))
+            hVaR_975_t = (df_rendimientos[stock_seleccionado].quantile(0.025))
+            hVaR_99_t = (df_rendimientos[stock_seleccionado].quantile(0.01))
+
+            # Monte Carlo
+
+            # Number of simulations
+            n_sims = 100000
+
+            # Simulate returns and sort
+            sim_returns = stats.t.rvs(df=len(df_rendimientos[stock_seleccionado])-1, loc=mean_t, scale=stdev_t, size=n_sims)
+
+            MCVaR_95_t = np.percentile(sim_returns, 5)
+            MCVaR_975_t = np.percentile(sim_returns, 2.5)
+            MCVaR_99_t = np.percentile(sim_returns, 1)
+
+            CVaR_95_t = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_95_t].mean())
+            CVaR_975_t = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_975_t].mean())
+            CVaR_99_t = (df_rendimientos[stock_seleccionado][df_rendimientos[stock_seleccionado] <= hVaR_99_t].mean())
+
+            st.subheader("Metricas de riesgo")
+            #95%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("95% VaR", f"{VaR_95_t:.4%}")
+            col5.metric("(Historical)", f"{hVaR_95_t:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_95_t:.4%}")
+            col7.metric("95% CVaR", f"{CVaR_95_t:.4%}")
+            st.subheader("Grafica metricas de riesgo")
+            #Estilo general de las gráficas
+            plt.style.use('dark_background')
+
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_95
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_95_t:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_95_t, color='#00d4ff', linestyle='--', label='VaR 95% (Paramétrico)')
+            ax.axvline(x=MCVaR_95_t, color='#9b59b6', linestyle='--', label='VaR 95% (Monte Carlo)')
+            ax.axvline(x=hVaR_95_t, color='#00ff88', linestyle='--', label='VaR 95% (Histórico)')
+            ax.axvline(x=CVaR_95_t, color='#ff6b35', linestyle='-.', label='CVaR 95%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
+            
+
+            #97.5%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("97.5% VaR", f"{VaR_975_t:.4%}")
+            col5.metric("(Historical)", f"{hVaR_975_t:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_975_t:.4%}")
+            col7.metric("97.5% CVaR", f"{CVaR_975_t:.4%}")
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_95
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_975_t:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_975_t, color='#00d4ff', linestyle='--', label='VaR 97.5% (Paramétrico)')
+            ax.axvline(x=MCVaR_975_t, color='#9b59b6', linestyle='--', label='VaR 97.5% (Monte Carlo)')
+            ax.axvline(x=hVaR_975_t, color='#00ff88', linestyle='--', label='VaR 97.5% (Histórico)')
+            ax.axvline(x=CVaR_975_t, color='#ff6b35', linestyle='-.', label='CVaR 97.5%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
+
+            #99%
+            col4, col5, col6, col7= st.columns(4)
+            col4.metric("99% VaR", f"{VaR_99_t:.4%}")
+            col5.metric("(Historical)", f"{hVaR_99_t:.4%}")
+            col6.metric("(Monte Carlo)", f"{MCVaR_99_t:.4%}")
+            col7.metric("99% CVaR", f"{CVaR_99_t:.4%}")
+
+            # Crear la figura y el eje
+            fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
+            ax.set_facecolor('#0f142e')
+
+            # Generar histograma
+            n, bins, patches = ax.hist(df_rendimientos[stock_seleccionado], bins=50, color='blue', alpha=0.7, label='Returns')
+
+            # Identificar y colorear de rojo las barras a la izquierda de hVaR_99
+            for bin_left, bin_right, patch in zip(bins, bins[1:], patches):
+                if bin_left < hVaR_99_t:
+                    patch.set_facecolor('red')
+
+            # Marcar las líneas de VaR y CVaR
+            ax.axvline(x=VaR_99_t, color='#00d4ff', linestyle='--', label='VaR 99% (Paramétrico)')
+            ax.axvline(x=MCVaR_99_t, color='#9b59b6', linestyle='--', label='VaR 99% (Monte Carlo)')
+            ax.axvline(x=hVaR_99_t, color='#00ff88', linestyle='--', label='VaR 99% (Histórico)')
+            ax.axvline(x=CVaR_99_t, color='#ff6b35', linestyle='-.', label='CVaR 99%')
+
+            # Configurar etiquetas y leyenda
+            ax.set_title("Histograma de Rendimientos con VaR y CVaR", fontsize=14, fontweight='bold',color='#00d4ff',fontfamily='monospace',pad=20)
+            ax.set_xlabel("Rendimiento Diario", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.set_ylabel("Frecuencia", fontsize=11, color='#8892b0',fontfamily='monospace',fontweight='bold')
+            ax.legend()
+
+            # Mostrar la figura en Streamlit
+            st.pyplot(fig)
