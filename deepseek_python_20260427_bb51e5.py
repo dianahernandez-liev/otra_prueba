@@ -463,12 +463,15 @@ if stock_seleccionado:
         # Crear la figura y el eje
         fig, ax = plt.subplots(figsize=(13, 5), facecolor='#0a0e27')
         ax.set_facecolor('#0f142e')
-        ax.plot(df_rendimientos.index, hVaR_95_rolling_df['95%  VaR histórico Rolling'], label='95% Rolling VaR Histórico', color='#00ff88')
-        ax.plot(df_rendimientos.index, VaR_95_rolling_df['95%  VaR histórico Rolling'], label='95% Rolling VaR Paramétrico', color='#4b0082')
+        
+        ax.plot(df_rendimientos.index, hVaR_95_rolling_percent, label='95% Rolling VaR Histórico', color='#00ff88', linewidth=2)
+        ax.plot(df_rendimientos.index, VaR_95_rolling_percent, label='95% Rolling VaR Paramétrico', color='#00d4ff', linewidth=2)
         #Configurar etiquetas y leyenda
-        ax.set_title('95% Rolling VaR vs Retornos Diarios', fontsize=14, fontweight='bold', color='#fc6e22', fontfamily='monospace', pad=20)
+        ax.set_title(f'95% Rolling VaR - {stock_seleccionado}', fontsize=14, fontweight='bold', color='#00d4ff', fontfamily='monospace', pad=20)
         ax.set_xlabel('Fecha', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
-        ax.set_ylabel('Valores (%)', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
-        ax.legend()
-        #mostrar la figura en Streamlit
+        ax.set_ylabel('VaR (%)', fontsize=11, color='#8892b0', fontfamily='monospace', fontweight='bold')
+        ax.legend(loc='upper left', facecolor='#0f142e', edgecolor='#00d4ff')
+        ax.grid(True, alpha=0.2, color='white')
+        
+        # Mostrar la figura
         st.pyplot(fig)
